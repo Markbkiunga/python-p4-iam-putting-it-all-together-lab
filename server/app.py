@@ -43,11 +43,25 @@ class CheckSession(Resource):
 
 
 class Login(Resource):
-    pass
+    def post(self):
+        data = request.get_json() if request.is_json else request.form
+        if "username" not in data or "password" not in data:
+            return {"error": "Missing required fields"}, 422
+        user = User.query.filter_by(username=data["username"]).first()
+        if user and user.authenticate(data["password"]):
+            session["user_id"] = user.id
+            return make_response(user.to_dict(), 200)
+        else:
+            return make_response({"error": "Username or password incorrect"}, 401)
 
 
 class Logout(Resource):
-    pass
+    def delete(self):
+        if session["user_id"]:
+            session["user_id"] = None
+            return make_response({}, 204)
+        else:
+            return make_response({"error": "You are not logged in"}, 401)
 
 
 class RecipeIndex(Resource):
