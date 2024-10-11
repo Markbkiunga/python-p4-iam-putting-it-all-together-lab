@@ -29,7 +29,7 @@ class Signup(Resource):
         except IntegrityError:
             return {"error": "Username already exists"}, 422
         except Exception as e:
-            print(str(e))
+            print(e)
             return make_response({"error": str(e)}, 422)
 
 
@@ -65,7 +65,35 @@ class Logout(Resource):
 
 
 class RecipeIndex(Resource):
-    pass
+    def get(self):
+        if not session["user_id"]:
+            return make_response({"error": "You are not logged in"}, 401)
+        recipes = Recipe.query.all()
+        return make_response([recipe.to_dict() for recipe in recipes], 200)
+
+    def post(self):
+        data = request.get_json() if request.is_json else request.form
+        if not session["user_id"]:
+            return make_response({"error": "You are not logged in"}, 401)
+        if (
+            not data["title"]
+            or not data["instructions"]
+            or not data["minutes_to_complete"]
+        ):
+            return {"error": "Data entered is invalid"}, 422
+        try:
+            recipe = Recipe(
+                title=data["title"],
+                instructions=data["instructions"],
+                minutes_to_complete=data["minutes_to_complete"],
+                user_id=session["user_id"],
+            )
+            db.session.add(recipe)
+            db.session.commit()
+            return make_response(recipe.to_dict(), 201)
+        except Exception as e:
+            print(e)
+            return {"error": str(e)}, 422
 
 
 api.add_resource(Signup, "/signup", endpoint="signup")
